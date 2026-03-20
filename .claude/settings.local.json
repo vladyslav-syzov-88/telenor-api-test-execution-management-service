@@ -8,7 +8,8 @@
       "WebFetch(domain:deepwiki.com)",
       "WebFetch(domain:github.com)",
       "Bash(curl:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(ls:*)"
     ]
   }
 }
