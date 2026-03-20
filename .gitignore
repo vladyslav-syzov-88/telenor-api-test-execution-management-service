@@ -1,0 +1,8 @@
+packages
+bin
+obj
+.idea
+.vs
+*.user
+*.bak
+TestResults

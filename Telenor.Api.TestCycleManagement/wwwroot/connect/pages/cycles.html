@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Test Cycles</title>
+	<link rel="stylesheet" href="/connect/assets/styles.css" />
+	<script src="https://connect-cdn.atl-paas.net/all.js" data-options="sizeToParent:true"></script>
+	<script src="/connect/js/connect-client.js"></script>
+</head>
+<body>
+	<div class="tcm-toolbar">
+		<h1>Test Cycles</h1>
+		<div>
+			<select id="versionSelect" class="tcm-select">
+				<option value="">All Versions</option>
+			</select>
+			<button class="tcm-btn tcm-btn-primary" onclick="createCycle()">Create Cycle</button>
+		</div>
+	</div>
+
+	<div id="content"></div>
+
+	<script>
+		let projectId = null;
+
+		document.addEventListener('DOMContentLoaded', function () {
+			TCM.init(function (context) {
+				projectId = TCM.getQueryParam('projectId') || context.jira?.project?.id;
+				if (projectId) {
+					loadVersions();
+					loadCycles();
+				} else {
+					document.getElementById('content').innerHTML =
+						'<div class="tcm-empty"><p>No project context available.</p></div>';
+				}
+			});
+		});
+
+		async function loadVersions() {
+			try {
+				const versions = await TCM.api('/api/projects/' + projectId + '/versions');
+				const select = document.getElementById('versionSelect');
+				versions.forEach(function (v) {
+					const opt = document.createElement('option');
+					opt.value = v.id;
+					opt.textContent = v.name + (v.isReleased ? ' (Released)' : '');
+					select.appendChild(opt);
+				});
+				select.addEventListener('change', loadCycles);
+			} catch (err) {
+				console.error('Failed to load versions:', err);
+			}
+		}
+
+		async function loadCycles() {
+			const container = document.getElementById('content');
+			TCM.showLoading(container);
+
+			try {
+				const versionId = document.getElementById('versionSelect').value;
+				let url = '/api/cycles?projectId=' + projectId;
+				if (versionId) url += '&versionId=' + versionId;
+
+				const cycles = await TCM.api(url);
+
+				if (cycles.length === 0) {
+					container.innerHTML = '<div class="tcm-empty"><p>No test cycles found.</p><p>Create a cycle to get started.</p></div>';
+					return;
+				}
+
+				let html = '<table class="tcm-table"><thead><tr>';
+				html += '<th>Cycle Name</th><th>Status</th><th>Created</th><th>Start</th><th>End</th>';
+				html += '</tr></thead><tbody>';
+
+				cycles.forEach(function (c) {
+					const statusColors = { 'Draft': '#6B778C', 'Active': '#36B37E', 'Completed': '#0052CC' };
+					const color = statusColors[c.status] || '#6B778C';
+					html += '<tr style="cursor:pointer" onclick="viewCycle(\'' + c.id + '\')">';
+					html += '<td><strong>' + escapeHtml(c.name) + '</strong></td>';
+					html += '<td><span class="tcm-badge" style="background:' + color + '">' + c.status + '</span></td>';
+					html += '<td>' + formatDate(c.createdAt) + '</td>';
+					html += '<td>' + (c.startDate ? formatDate(c.startDate) : '-') + '</td>';
+					html += '<td>' + (c.endDate ? formatDate(c.endDate) : '-') + '</td>';
+					html += '</tr>';
+				});
+
+				html += '</tbody></table>';
+				container.innerHTML = html;
+			} catch (err) {
+				container.innerHTML = '<div class="tcm-empty"><p>Failed to load cycles.</p></div>';
+				console.error(err);
+			}
+		}
+
+		function viewCycle(cycleId) {
+			// Load folders and executions for this cycle
+			loadCycleDetail(cycleId);
+		}
+
+		async function loadCycleDetail(cycleId) {
+			const container = document.getElementById('content');
+			TCM.showLoading(container);
+
+			try {
+				const [summary, folders] = await Promise.all([
+					TCM.api('/api/dashboard/cycles/' + cycleId + '/summary'),
+					TCM.api('/api/cycles/' + cycleId + '/folders')
+				]);
+
+				let html = '<div class="tcm-toolbar">';
+				html += '<div><button class="tcm-btn tcm-btn-default" onclick="loadCycles()">Back to Cycles</button>';
+				html += ' <strong style="margin-left:8px">' + escapeHtml(summary.cycleName) + '</strong></div>';
+				html += '<span class="tcm-badge" style="background:#0052CC">' + summary.cycleStatus + '</span></div>';
+
+				// Summary stats
+				html += '<div class="tcm-stats">';
+				html += stat(summary.totalExecutions, 'Total', '#172B4D');
+				html += stat(summary.passed, 'Passed', '#36B37E');
+				html += stat(summary.failed, 'Failed', '#FF5630');
+				html += stat(summary.blocked, 'Blocked', '#6554C0');
+				html += stat(summary.wip, 'WIP', '#FFAB00');
+				html += stat(summary.unExecuted, 'Unexecuted', '#999');
+				html += '</div>';
+
+				// Progress bar
+				if (summary.totalExecutions > 0) {
+					html += progressBar(summary);
+				}
+
+				// Folders
+				html += '<h2>Folders</h2>';
+				if (folders.length === 0) {
+					html += '<div class="tcm-empty"><p>No folders in this cycle.</p></div>';
+				} else {
+					html += '<div class="tcm-grid">';
+					folders.forEach(function (f) {
+						html += '<div class="tcm-card" style="cursor:pointer" onclick="viewFolder(\'' + f.id + '\')">';
+						html += '<div class="tcm-card-header"><strong>' + escapeHtml(f.name) + '</strong></div>';
+						html += '</div>';
+					});
+					html += '</div>';
+				}
+
+				container.innerHTML = html;
+			} catch (err) {
+				container.innerHTML = '<div class="tcm-empty"><p>Failed to load cycle details.</p></div>';
+				console.error(err);
+			}
+		}
+
+		async function viewFolder(folderId) {
+			const container = document.getElementById('content');
+			TCM.showLoading(container);
+
+			try {
+				const data = await TCM.api('/api/executions/folder/' + folderId + '?size=100');
+				const executions = data.executions || data;
+
+				let html = '<div class="tcm-toolbar">';
+				html += '<button class="tcm-btn tcm-btn-default" onclick="loadCycles()">Back to Cycles</button>';
+				html += '</div>';
+
+				if (Array.isArray(executions) && executions.length === 0) {
+					html += '<div class="tcm-empty"><p>No executions in this folder.</p></div>';
+				} else {
+					html += '<table class="tcm-table"><thead><tr>';
+					html += '<th>Test Case</th><th>Jira Key</th><th>Status</th><th>Assigned To</th><th>Updated</th>';
+					html += '</tr></thead><tbody>';
+
+					const items = Array.isArray(executions) ? executions : [executions];
+					items.forEach(function (ex) {
+						html += '<tr>';
+						html += '<td>' + escapeHtml(ex.testCaseSummary || ex.testCaseId || '-') + '</td>';
+						html += '<td>' + escapeHtml(ex.jiraIssueKey || '-') + '</td>';
+						html += '<td>' + TCM.statusBadge(ex.statusId, ex.statusName) + '</td>';
+						html += '<td>' + escapeHtml(ex.assignedTo || '-') + '</td>';
+						html += '<td>' + formatDate(ex.updatedAt) + '</td>';
+						html += '</tr>';
+					});
+
+					html += '</tbody></table>';
+				}
+
+				container.innerHTML = html;
+			} catch (err) {
+				container.innerHTML = '<div class="tcm-empty"><p>Failed to load executions.</p></div>';
+				console.error(err);
+			}
+		}
+
+		function createCycle() {
+			AP.dialog.create({
+				key: 'create-cycle-dialog',
+				title: 'Create Test Cycle',
+				hint: 'Enter cycle details',
+				width: '500px',
+				height: '300px'
+			});
+		}
+
+		// Helpers
+		function stat(value, label, color) {
+			return '<div class="tcm-stat"><span class="tcm-stat-value" style="color:' + color + '">' + value + '</span><span class="tcm-stat-label">' + label + '</span></div>';
+		}
+
+		function progressBar(s) {
+			const t = s.totalExecutions || 1;
+			return '<div class="tcm-progress">' +
+				'<div class="tcm-progress-bar tcm-progress-pass" style="width:' + (s.passed / t * 100) + '%"></div>' +
+				'<div class="tcm-progress-bar tcm-progress-fail" style="width:' + (s.failed / t * 100) + '%"></div>' +
+				'<div class="tcm-progress-bar tcm-progress-wip" style="width:' + (s.wip / t * 100) + '%"></div>' +
+				'<div class="tcm-progress-bar tcm-progress-blocked" style="width:' + (s.blocked / t * 100) + '%"></div>' +
+				'</div>';
+		}
+
+		function formatDate(d) {
+			if (!d) return '-';
+			return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+		}
+
+		function escapeHtml(str) {
+			if (!str) return '';
+			const div = document.createElement('div');
+			div.textContent = str;
+			return div.innerHTML;
+		}
+	</script>
+</body>
+</html>

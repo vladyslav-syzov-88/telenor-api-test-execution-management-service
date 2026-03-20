@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet format:*)",
+      "Bash(grep:*)",
+      "Bash(dotnet build:*)",
+      "WebSearch",
+      "WebFetch(domain:deepwiki.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl:*)",
+      "Bash(mv:*)"
+    ]
+  }
+}

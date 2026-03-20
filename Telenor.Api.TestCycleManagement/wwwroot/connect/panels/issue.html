@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Test Executions</title>
+	<link rel="stylesheet" href="/connect/assets/styles.css" />
+	<script src="https://connect-cdn.atl-paas.net/all.js" data-options="sizeToParent:true"></script>
+	<script src="/connect/js/connect-client.js"></script>
+	<style>
+		/* Compact styles for the issue side panel */
+		body { padding: 8px; font-size: 13px; }
+		h2 { font-size: 14px; margin-bottom: 8px; }
+		.tcm-table td, .tcm-table th { padding: 4px 8px; }
+		.tcm-badge { font-size: 10px; padding: 1px 6px; }
+		.tcm-empty { padding: 16px 8px; }
+	</style>
+</head>
+<body>
+	<div id="content"></div>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			TCM.init(function (context) {
+				const issueKey = TCM.getQueryParam('issueKey') || context.jira?.issue?.key;
+				if (issueKey) {
+					loadTestCase(issueKey);
+				} else {
+					document.getElementById('content').innerHTML =
+						'<div class="tcm-empty"><p>No issue context.</p></div>';
+				}
+			});
+		});
+
+		async function loadTestCase(issueKey) {
+			const container = document.getElementById('content');
+			TCM.showLoading(container);
+
+			try {
+				const testCase = await TCM.api('/api/testcases/by-jira-key/' + encodeURIComponent(issueKey));
+
+				if (!testCase) {
+					container.innerHTML = '<div class="tcm-empty"><p>No test case linked to ' + escapeHtml(issueKey) + '</p></div>';
+					return;
+				}
+
+				let html = '<h2>' + escapeHtml(testCase.summary || testCase.jiraIssueKey) + '</h2>';
+
+				// Load executions for this test case via search
+				try {
+					const searchResult = await TCM.api('/api/executions/search', {
+						method: 'POST',
+						body: { testCaseId: testCase.id, maxRecords: 20 }
+					});
+
+					const executions = searchResult.executions || searchResult;
+
+					if (Array.isArray(executions) && executions.length > 0) {
+						html += '<table class="tcm-table"><thead><tr>';
+						html += '<th>Cycle</th><th>Folder</th><th>Status</th>';
+						html += '</tr></thead><tbody>';
+
+						executions.forEach(function (ex) {
+							html += '<tr>';
+							html += '<td>' + escapeHtml(ex.cycleName || ex.cycleId || '-') + '</td>';
+							html += '<td>' + escapeHtml(ex.folderName || ex.folderId || '-') + '</td>';
+							html += '<td>' + TCM.statusBadge(ex.statusId, ex.statusName) + '</td>';
+							html += '</tr>';
+						});
+
+						html += '</tbody></table>';
+					} else {
+						html += '<p style="color:#6B778C;font-size:12px;margin-top:8px">No executions found.</p>';
+					}
+				} catch {
+					html += '<p style="color:#6B778C;font-size:12px;margin-top:8px">No executions found.</p>';
+				}
+
+				container.innerHTML = html;
+			} catch {
+				// Test case not found — show empty state
+				container.innerHTML = '<div class="tcm-empty"><p>No test case linked to ' + escapeHtml(issueKey) + '</p></div>';
+			}
+		}
+
+		function escapeHtml(str) {
+			if (!str) return '';
+			const div = document.createElement('div');
+			div.textContent = str;
+			return div.innerHTML;
+		}
+	</script>
+</body>
+</html>

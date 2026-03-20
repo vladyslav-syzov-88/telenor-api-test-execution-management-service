@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Test Dashboard</title>
+	<link rel="stylesheet" href="/connect/assets/styles.css" />
+	<script src="https://connect-cdn.atl-paas.net/all.js" data-options="sizeToParent:true"></script>
+	<script src="/connect/js/connect-client.js"></script>
+</head>
+<body>
+	<div class="tcm-toolbar">
+		<h1>Test Dashboard</h1>
+		<select id="versionSelect" class="tcm-select">
+			<option value="">Select Version</option>
+		</select>
+	</div>
+
+	<div id="content"></div>
+
+	<script>
+		let projectId = null;
+
+		document.addEventListener('DOMContentLoaded', function () {
+			TCM.init(function (context) {
+				projectId = TCM.getQueryParam('projectId') || context.jira?.project?.id;
+				if (projectId) {
+					loadVersionsOverview();
+					loadVersionSelector();
+				} else {
+					document.getElementById('content').innerHTML =
+						'<div class="tcm-empty"><p>No project context available.</p></div>';
+				}
+			});
+		});
+
+		async function loadVersionSelector() {
+			try {
+				const versions = await TCM.api('/api/projects/' + projectId + '/versions');
+				const select = document.getElementById('versionSelect');
+				versions.forEach(function (v) {
+					const opt = document.createElement('option');
+					opt.value = v.id;
+					opt.textContent = v.name + (v.isReleased ? ' (Released)' : '');
+					select.appendChild(opt);
+				});
+				select.addEventListener('change', function () {
+					if (this.value) {
+						loadVersionSummary(this.value);
+					} else {
+						loadVersionsOverview();
+					}
+				});
+			} catch (err) {
+				console.error('Failed to load versions:', err);
+			}
+		}
+
+		async function loadVersionsOverview() {
+			const container = document.getElementById('content');
+			TCM.showLoading(container);
+
+			try {
+				const versions = await TCM.api('/api/dashboard/versions?projectId=' + projectId);
+
+				if (versions.length === 0) {
+					container.innerHTML = '<div class="tcm-empty"><p>No versions found for this project.</p></div>';
+					return;
+				}
+
+				let html = '<h2>Versions Overview</h2>';
+				html += '<table class="tcm-table"><thead><tr>';
+				html += '<th>Version</th><th>Status</th><th>Release Date</th>';
+				html += '</tr></thead><tbody>';
+
+				versions.forEach(function (v) {
+					const status = v.isReleased
+						? '<span class="tcm-badge" style="background:#36B37E">Released</span>'
+						: '<span class="tcm-badge" style="background:#FFAB00">Unreleased</span>';
+					html += '<tr style="cursor:pointer" onclick="document.getElementById(\'versionSelect\').value=\'' + v.versionId + '\';loadVersionSummary(\'' + v.versionId + '\')">';
+					html += '<td><strong>' + escapeHtml(v.versionName) + '</strong></td>';
+					html += '<td>' + status + '</td>';
+					html += '<td>' + (v.releaseDate ? formatDate(v.releaseDate) : '-') + '</td>';
+					html += '</tr>';
+				});
+
+				html += '</tbody></table>';
+				container.innerHTML = html;
+			} catch (err) {
+				container.innerHTML = '<div class="tcm-empty"><p>Failed to load versions overview.</p></div>';
+				console.error(err);
+			}
+		}
+
+		async function loadVersionSummary(versionId) {
+			const container = document.getElementById('content');
+			TCM.showLoading(container);
+
+			try {
+				const summary = await TCM.api('/api/dashboard/versions/' + versionId + '/summary');
+
+				let html = '<h2>' + escapeHtml(summary.versionName) + '</h2>';
+
+				if (summary.cycles.length === 0) {
+					html += '<div class="tcm-empty"><p>No test cycles in this version.</p></div>';
+					container.innerHTML = html;
+					return;
+				}
+
+				// Aggregate stats
+				let total = 0, passed = 0, failed = 0, blocked = 0, wip = 0, unexecuted = 0;
+				summary.cycles.forEach(function (c) {
+					total += c.totalExecutions;
+					passed += c.passed;
+					failed += c.failed;
+					blocked += c.blocked;
+					wip += c.wip;
+					unexecuted += c.unExecuted;
+				});
+
+				html += '<div class="tcm-stats">';
+				html += stat(total, 'Total', '#172B4D');
+				html += stat(passed, 'Passed', '#36B37E');
+				html += stat(failed, 'Failed', '#FF5630');
+				html += stat(blocked, 'Blocked', '#6554C0');
+				html += stat(wip, 'WIP', '#FFAB00');
+				html += stat(unexecuted, 'Unexecuted', '#999');
+				html += '</div>';
+
+				if (total > 0) {
+					html += progressBar({ totalExecutions: total, passed: passed, failed: failed, wip: wip, blocked: blocked });
+				}
+
+				// Per-cycle breakdown
+				html += '<h2>Cycles</h2>';
+				html += '<div class="tcm-grid">';
+				summary.cycles.forEach(function (c) {
+					html += '<div class="tcm-card">';
+					html += '<div class="tcm-card-header"><strong>' + escapeHtml(c.cycleName) + '</strong>';
+					const statusColors = { 'Draft': '#6B778C', 'Active': '#36B37E', 'Completed': '#0052CC' };
+					html += '<span class="tcm-badge" style="background:' + (statusColors[c.cycleStatus] || '#6B778C') + '">' + c.cycleStatus + '</span>';
+					html += '</div>';
+					if (c.totalExecutions > 0) {
+						html += progressBar(c);
+						html += '<div style="display:flex;justify-content:space-between;font-size:12px;color:#6B778C;margin-top:4px">';
+						html += '<span>' + c.passed + ' passed</span>';
+						html += '<span>' + c.failed + ' failed</span>';
+						html += '<span>' + c.totalExecutions + ' total</span>';
+						html += '</div>';
+					} else {
+						html += '<p style="color:#6B778C;font-size:12px">No executions</p>';
+					}
+					html += '</div>';
+				});
+				html += '</div>';
+
+				container.innerHTML = html;
+			} catch (err) {
+				container.innerHTML = '<div class="tcm-empty"><p>Failed to load version summary.</p></div>';
+				console.error(err);
+			}
+		}
+
+		// Helpers
+		function stat(value, label, color) {
+			return '<div class="tcm-stat"><span class="tcm-stat-value" style="color:' + color + '">' + value + '</span><span class="tcm-stat-label">' + label + '</span></div>';
+		}
+
+		function progressBar(s) {
+			const t = s.totalExecutions || 1;
+			return '<div class="tcm-progress">' +
+				'<div class="tcm-progress-bar tcm-progress-pass" style="width:' + (s.passed / t * 100) + '%"></div>' +
+				'<div class="tcm-progress-bar tcm-progress-fail" style="width:' + (s.failed / t * 100) + '%"></div>' +
+				'<div class="tcm-progress-bar tcm-progress-wip" style="width:' + (s.wip / t * 100) + '%"></div>' +
+				'<div class="tcm-progress-bar tcm-progress-blocked" style="width:' + (s.blocked / t * 100) + '%"></div>' +
+				'</div>';
+		}
+
+		function formatDate(d) {
+			if (!d) return '-';
+			return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+		}
+
+		function escapeHtml(str) {
+			if (!str) return '';
+			const div = document.createElement('div');
+			div.textContent = str;
+			return div.innerHTML;
+		}
+	</script>
+</body>
+</html>
