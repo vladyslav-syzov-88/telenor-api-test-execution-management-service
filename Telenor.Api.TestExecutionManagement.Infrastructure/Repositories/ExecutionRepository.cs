@@ -71,6 +71,7 @@ public class ExecutionRepository(AppDbContext db) : IExecutionRepository
 	public async Task<ExecutionResponse?> UpdateExecutionAsync(string id, UpdateExecutionRequest request, string changedBy, CancellationToken ct = default)
 	{
 		var execution = await db.TestExecutions
+			.AsNoTracking()
 			.Include(x => x.TestCase)
 			.Include(x => x.Project)
 			.Include(x => x.Version)
@@ -78,9 +79,15 @@ public class ExecutionRepository(AppDbContext db) : IExecutionRepository
 
 		if (execution is null) return null;
 
-		execution.StatusId = (ExecutionStatus)request.StatusId;
-		execution.Comment = request.Comment ?? execution.Comment;
-		execution.UpdatedAt = DateTime.UtcNow;
+		var now = DateTime.UtcNow;
+		var updated = execution with
+		{
+			StatusId = (ExecutionStatus)request.StatusId,
+			Comment = request.Comment ?? execution.Comment,
+			UpdatedAt = now
+		};
+
+		db.TestExecutions.Update(updated);
 
 		db.ExecutionHistory.Add(new ExecutionHistory
 		{
@@ -88,30 +95,28 @@ public class ExecutionRepository(AppDbContext db) : IExecutionRepository
 			StatusId = (ExecutionStatus)request.StatusId,
 			Comment = request.Comment,
 			ChangedBy = changedBy,
-			ChangedAt = DateTime.UtcNow
+			ChangedAt = now
 		});
 
 		await db.SaveChangesAsync(ct);
-		return ToResponse(execution);
+		return ToResponse(updated);
 	}
 
 	public async Task<int> BulkUpdateExecutionsAsync(BulkUpdateExecutionsRequest request, string changedBy, CancellationToken ct = default)
 	{
-		var executions = await db.TestExecutions
-			.Where(x => request.ExecutionIds.Contains(x.Id))
-			.ToListAsync(ct);
-
 		var now = DateTime.UtcNow;
 		var status = (ExecutionStatus)request.StatusId;
 
-		foreach (var execution in executions)
-		{
-			execution.StatusId = status;
-			execution.UpdatedAt = now;
+		var executionIds = await db.TestExecutions
+			.Where(x => request.ExecutionIds.Contains(x.Id))
+			.Select(x => x.Id)
+			.ToListAsync(ct);
 
+		foreach (var executionId in executionIds)
+		{
 			db.ExecutionHistory.Add(new ExecutionHistory
 			{
-				ExecutionId = execution.Id,
+				ExecutionId = executionId,
 				StatusId = status,
 				ChangedBy = changedBy,
 				ChangedAt = now
@@ -119,7 +124,12 @@ public class ExecutionRepository(AppDbContext db) : IExecutionRepository
 		}
 
 		await db.SaveChangesAsync(ct);
-		return executions.Count;
+
+		return await db.TestExecutions
+			.Where(x => request.ExecutionIds.Contains(x.Id))
+			.ExecuteUpdateAsync(s => s
+				.SetProperty(x => x.StatusId, status)
+				.SetProperty(x => x.UpdatedAt, now), ct);
 	}
 
 	public async Task<List<ExecutionHistoryResponse>> GetExecutionHistoryAsync(string executionId, CancellationToken ct = default)

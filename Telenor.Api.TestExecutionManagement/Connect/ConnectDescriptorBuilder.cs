@@ -86,160 +86,160 @@ public static class ConnectDescriptorBuilder
 
 #region Descriptor Model
 
-internal class ConnectDescriptor
+internal record ConnectDescriptor
 {
 	[JsonPropertyName("key")]
-	public string Key { get; set; } = string.Empty;
+	public string Key { get; init; } = string.Empty;
 
 	[JsonPropertyName("name")]
-	public string Name { get; set; } = string.Empty;
+	public string Name { get; init; } = string.Empty;
 
 	[JsonPropertyName("description")]
-	public string Description { get; set; } = string.Empty;
+	public string Description { get; init; } = string.Empty;
 
 	[JsonPropertyName("baseUrl")]
-	public string BaseUrl { get; set; } = string.Empty;
+	public string BaseUrl { get; init; } = string.Empty;
 
 	[JsonPropertyName("vendor")]
-	public Vendor Vendor { get; set; } = new();
+	public Vendor Vendor { get; init; } = new();
 
 	[JsonPropertyName("authentication")]
-	public Authentication Authentication { get; set; } = new();
+	public Authentication Authentication { get; init; } = new();
 
 	[JsonPropertyName("apiVersion")]
-	public int ApiVersion { get; set; } = 1;
+	public int ApiVersion { get; init; } = 1;
 
 	[JsonPropertyName("lifecycle")]
-	public Lifecycle Lifecycle { get; set; } = new();
+	public Lifecycle Lifecycle { get; init; } = new();
 
 	[JsonPropertyName("scopes")]
-	public List<string> Scopes { get; set; } = [];
+	public List<string> Scopes { get; init; } = [];
 
 	[JsonPropertyName("modules")]
-	public Modules Modules { get; set; } = new();
+	public Modules Modules { get; init; } = new();
 }
 
-internal class Vendor
+internal record Vendor
 {
 	[JsonPropertyName("name")]
-	public string Name { get; set; } = string.Empty;
+	public string Name { get; init; } = string.Empty;
 
 	[JsonPropertyName("url")]
-	public string Url { get; set; } = string.Empty;
+	public string Url { get; init; } = string.Empty;
 }
 
-internal class Authentication
+internal record Authentication
 {
 	[JsonPropertyName("type")]
-	public string Type { get; set; } = "jwt";
+	public string Type { get; init; } = "jwt";
 }
 
-internal class Lifecycle
+internal record Lifecycle
 {
 	[JsonPropertyName("installed")]
-	public string Installed { get; set; } = string.Empty;
+	public string Installed { get; init; } = string.Empty;
 
 	[JsonPropertyName("uninstalled")]
-	public string Uninstalled { get; set; } = string.Empty;
+	public string Uninstalled { get; init; } = string.Empty;
 
 	[JsonPropertyName("enabled")]
-	public string? Enabled { get; set; }
+	public string? Enabled { get; init; }
 
 	[JsonPropertyName("disabled")]
-	public string? Disabled { get; set; }
+	public string? Disabled { get; init; }
 }
 
-internal class Modules
+internal record Modules
 {
 	[JsonPropertyName("generalPages")]
-	public List<GeneralPage> GeneralPages { get; set; } = [];
+	public List<GeneralPage> GeneralPages { get; init; } = [];
 
 	[JsonPropertyName("webPanels")]
-	public List<WebPanel> WebPanels { get; set; } = [];
+	public List<WebPanel> WebPanels { get; init; } = [];
 
 	[JsonPropertyName("jiraProjectTabPanels")]
-	public List<ProjectTabPanel> JiraProjectTabPanels { get; set; } = [];
+	public List<ProjectTabPanel> JiraProjectTabPanels { get; init; } = [];
 
 	[JsonPropertyName("webhooks")]
-	public List<WebhookHandler> WebhookHandlers { get; set; } = [];
+	public List<WebhookHandler> WebhookHandlers { get; init; } = [];
 }
 
-internal class GeneralPage
+internal record GeneralPage
 {
 	[JsonPropertyName("key")]
-	public string Key { get; set; } = string.Empty;
+	public string Key { get; init; } = string.Empty;
 
 	[JsonPropertyName("name")]
-	public LocalizedText Name { get; set; } = new();
+	public LocalizedText Name { get; init; } = new();
 
 	[JsonPropertyName("url")]
-	public string Url { get; set; } = string.Empty;
+	public string Url { get; init; } = string.Empty;
 
 	[JsonPropertyName("location")]
-	public string Location { get; set; } = string.Empty;
+	public string Location { get; init; } = string.Empty;
 
 	[JsonPropertyName("icon")]
-	public Icon? Icon { get; set; }
+	public Icon? Icon { get; init; }
 }
 
-internal class WebPanel
+internal record WebPanel
 {
 	[JsonPropertyName("key")]
-	public string Key { get; set; } = string.Empty;
+	public string Key { get; init; } = string.Empty;
 
 	[JsonPropertyName("name")]
-	public LocalizedText Name { get; set; } = new();
+	public LocalizedText Name { get; init; } = new();
 
 	[JsonPropertyName("url")]
-	public string Url { get; set; } = string.Empty;
+	public string Url { get; init; } = string.Empty;
 
 	[JsonPropertyName("location")]
-	public string Location { get; set; } = string.Empty;
+	public string Location { get; init; } = string.Empty;
 
 	[JsonPropertyName("weight")]
-	public int Weight { get; set; }
+	public int Weight { get; init; }
 }
 
-internal class ProjectTabPanel
+internal record ProjectTabPanel
 {
 	[JsonPropertyName("key")]
-	public string Key { get; set; } = string.Empty;
+	public string Key { get; init; } = string.Empty;
 
 	[JsonPropertyName("name")]
-	public LocalizedText Name { get; set; } = new();
+	public LocalizedText Name { get; init; } = new();
 
 	[JsonPropertyName("url")]
-	public string Url { get; set; } = string.Empty;
+	public string Url { get; init; } = string.Empty;
 
 	[JsonPropertyName("weight")]
-	public int Weight { get; set; }
+	public int Weight { get; init; }
 }
 
-internal class WebhookHandler
+internal record WebhookHandler
 {
 	[JsonPropertyName("event")]
-	public string Event { get; set; } = string.Empty;
+	public string Event { get; init; } = string.Empty;
 
 	[JsonPropertyName("url")]
-	public string Url { get; set; } = string.Empty;
+	public string Url { get; init; } = string.Empty;
 }
 
-internal class LocalizedText
+internal record LocalizedText
 {
 	[JsonPropertyName("value")]
-	public string Value { get; set; } = string.Empty;
+	public string Value { get; init; } = string.Empty;
 }
 
-internal class Icon
+internal record Icon
 {
 	[JsonPropertyName("width")]
-	public int Width { get; set; }
+	public int Width { get; init; }
 
 	[JsonPropertyName("height")]
-	public int Height { get; set; }
+	public int Height { get; init; }
 
 	[JsonPropertyName("url")]
-	public string Url { get; set; } = string.Empty;
+	public string Url { get; init; } = string.Empty;
 }
 
 #endregion

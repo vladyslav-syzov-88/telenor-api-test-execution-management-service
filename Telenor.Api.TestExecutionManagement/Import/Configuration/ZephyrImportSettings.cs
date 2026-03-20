@@ -1,13 +1,13 @@
 namespace Telenor.Api.TestExecutionManagement.Import.Configuration;
 
-public class ZephyrImportSettings
+public record ZephyrImportSettings
 {
-	public string BaseUrl { get; set; } = "https://prod-api.zephyr4jiracloud.com/connect";
-	public string AccountId { get; set; } = string.Empty;
-	public string AccessKey { get; set; } = string.Empty;
-	public string SecretKey { get; set; } = string.Empty;
-	public int JwtValiditySeconds { get; set; } = 300;
+	public string BaseUrl { get; init; } = "https://prod-api.zephyr4jiracloud.com/connect";
+	public string AccountId { get; init; } = string.Empty;
+	public string AccessKey { get; init; } = string.Empty;
+	public string SecretKey { get; init; } = string.Empty;
+	public int JwtValiditySeconds { get; init; } = 300;
 
-	public string JiraBaseUrl { get; set; } = string.Empty;
-	public string JiraUser { get; set; } = string.Empty;
+	public string JiraBaseUrl { get; init; } = string.Empty;
+	public string JiraUser { get; init; } = string.Empty;
 }

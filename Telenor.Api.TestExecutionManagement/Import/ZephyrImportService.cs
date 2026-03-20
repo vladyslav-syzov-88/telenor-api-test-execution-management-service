@@ -161,15 +161,16 @@ public class ZephyrImportService(ZephyrApiClient zephyrClient, AppDbContext db, 
 	private async Task<TestCase> EnsureTestCaseAsync(
 		Project project, ZephyrTestExecution zExec, ImportCounters counters, CancellationToken ct)
 	{
-		var existing = await db.TestCases.FirstOrDefaultAsync(
+		var existing = await db.TestCases.AsNoTracking().FirstOrDefaultAsync(
 			t => t.ProjectId == project.Id && t.JiraIssueKey == zExec.IssueKey, ct);
 
 		if (existing is not null)
 		{
 			if (existing.Summary != zExec.IssueSummary)
 			{
-				existing.Summary = zExec.IssueSummary;
-				existing.UpdatedAt = DateTime.UtcNow;
+				var updated = existing with { Summary = zExec.IssueSummary, UpdatedAt = DateTime.UtcNow };
+				db.TestCases.Update(updated);
+				return updated;
 			}
 			return existing;
 		}

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -13,23 +14,29 @@ public class ConnectTenantRepository(AppDbContext db) : IConnectTenantRepository
 	public async Task<ConnectTenant?> GetByClientKeyAsync(string clientKey, CancellationToken ct = default)
 	{
 		return await db.ConnectTenants
+			.AsNoTracking()
 			.FirstOrDefaultAsync(t => t.ClientKey == clientKey && t.IsActive, ct);
 	}
 
 	public async Task UpsertAsync(ConnectTenant tenant, CancellationToken ct = default)
 	{
 		var existing = await db.ConnectTenants
+			.AsNoTracking()
 			.FirstOrDefaultAsync(t => t.ClientKey == tenant.ClientKey, ct);
 
 		if (existing is not null)
 		{
-			existing.SharedSecret = tenant.SharedSecret;
-			existing.BaseUrl = tenant.BaseUrl;
-			existing.DisplayUrl = tenant.DisplayUrl;
-			existing.ProductType = tenant.ProductType;
-			existing.Description = tenant.Description;
-			existing.IsActive = true;
-			existing.UpdatedAt = DateTime.UtcNow;
+			var updated = existing with
+			{
+				SharedSecret = tenant.SharedSecret,
+				BaseUrl = tenant.BaseUrl,
+				DisplayUrl = tenant.DisplayUrl,
+				ProductType = tenant.ProductType,
+				Description = tenant.Description,
+				IsActive = true,
+				UpdatedAt = DateTime.UtcNow
+			};
+			db.ConnectTenants.Update(updated);
 		}
 		else
 		{
@@ -41,14 +48,10 @@ public class ConnectTenantRepository(AppDbContext db) : IConnectTenantRepository
 
 	public async Task DeactivateAsync(string clientKey, CancellationToken ct = default)
 	{
-		var tenant = await db.ConnectTenants
-			.FirstOrDefaultAsync(t => t.ClientKey == clientKey, ct);
-
-		if (tenant is not null)
-		{
-			tenant.IsActive = false;
-			tenant.UpdatedAt = DateTime.UtcNow;
-			await db.SaveChangesAsync(ct);
-		}
+		await db.ConnectTenants
+			.Where(t => t.ClientKey == clientKey)
+			.ExecuteUpdateAsync(s => s
+				.SetProperty(t => t.IsActive, false)
+				.SetProperty(t => t.UpdatedAt, DateTime.UtcNow), ct);
 	}
 }

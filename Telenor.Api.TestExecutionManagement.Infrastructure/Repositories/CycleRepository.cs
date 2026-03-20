@@ -27,7 +27,7 @@ public class CycleRepository(AppDbContext db) : ICycleRepository
 
 	public async Task<CycleResponse?> GetCycleByIdAsync(string id, CancellationToken ct = default)
 	{
-		var cycle = await db.TestCycles.FindAsync([id], ct);
+		var cycle = await db.TestCycles.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
 		return cycle is null ? null : ToResponse(cycle);
 	}
 
@@ -49,31 +49,31 @@ public class CycleRepository(AppDbContext db) : ICycleRepository
 
 	public async Task<CycleResponse?> UpdateCycleAsync(string id, UpdateCycleRequest request, CancellationToken ct = default)
 	{
-		var cycle = await db.TestCycles.FindAsync([id], ct);
+		var cycle = await db.TestCycles.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
 		if (cycle is null) return null;
 
-		if (request.Name is not null) cycle.Name = request.Name;
-		if (request.Status.HasValue) cycle.Status = request.Status.Value;
-		if (request.StartDate.HasValue) cycle.StartDate = request.StartDate.Value;
-		if (request.EndDate.HasValue) cycle.EndDate = request.EndDate.Value;
+		var updated = cycle with
+		{
+			Name = request.Name ?? cycle.Name,
+			Status = request.Status ?? cycle.Status,
+			StartDate = request.StartDate ?? cycle.StartDate,
+			EndDate = request.EndDate ?? cycle.EndDate
+		};
 
+		db.TestCycles.Update(updated);
 		await db.SaveChangesAsync(ct);
-		return ToResponse(cycle);
+		return ToResponse(updated);
 	}
 
 	public async Task<bool> DeleteCycleAsync(string id, CancellationToken ct = default)
 	{
-		var cycle = await db.TestCycles.FindAsync([id], ct);
-		if (cycle is null) return false;
-
-		db.TestCycles.Remove(cycle);
-		await db.SaveChangesAsync(ct);
-		return true;
+		return await db.TestCycles.Where(c => c.Id == id).ExecuteDeleteAsync(ct) > 0;
 	}
 
 	public async Task<CycleResponse?> CloneCycleAsync(string cycleId, int targetVersionId, CancellationToken ct = default)
 	{
 		var source = await db.TestCycles
+			.AsNoTracking()
 			.Include(c => c.Folders)
 			.ThenInclude(f => f.Executions)
 			.FirstOrDefaultAsync(c => c.Id == cycleId, ct);

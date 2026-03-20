@@ -27,7 +27,7 @@ public class ConnectDescriptorController(IOptions<ConnectSettings> settings) : C
 		// Auto-detect base URL if not configured
 		if (string.IsNullOrEmpty(config.BaseUrl))
 		{
-			config.BaseUrl = $"{Request.Scheme}://{Request.Host}";
+			config = config with { BaseUrl = $"{Request.Scheme}://{Request.Host}" };
 		}
 
 		return Ok(ConnectDescriptorBuilder.Build(config));

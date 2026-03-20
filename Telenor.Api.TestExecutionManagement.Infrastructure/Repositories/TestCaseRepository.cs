@@ -29,7 +29,7 @@ public class TestCaseRepository(AppDbContext db) : ITestCaseRepository
 
 	public async Task<TestCaseResponse?> GetByJiraKeyAsync(string jiraIssueKey, CancellationToken ct = default)
 	{
-		var tc = await db.TestCases.FirstOrDefaultAsync(t => t.JiraIssueKey == jiraIssueKey, ct);
+		var tc = await db.TestCases.AsNoTracking().FirstOrDefaultAsync(t => t.JiraIssueKey == jiraIssueKey, ct);
 		return tc is null ? null : ToResponse(tc);
 	}
 
@@ -49,16 +49,20 @@ public class TestCaseRepository(AppDbContext db) : ITestCaseRepository
 
 	public async Task<TestCaseResponse?> UpdateTestCaseAsync(string id, UpdateTestCaseRequest request, CancellationToken ct = default)
 	{
-		var tc = await db.TestCases.FindAsync([id], ct);
+		var tc = await db.TestCases.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id, ct);
 		if (tc is null) return null;
 
-		if (request.JiraIssueKey is not null) tc.JiraIssueKey = request.JiraIssueKey;
-		if (request.Summary is not null) tc.Summary = request.Summary;
-		if (request.JiraIssueId.HasValue) tc.JiraIssueId = request.JiraIssueId.Value;
-		tc.UpdatedAt = DateTime.UtcNow;
+		var updated = tc with
+		{
+			JiraIssueKey = request.JiraIssueKey ?? tc.JiraIssueKey,
+			Summary = request.Summary ?? tc.Summary,
+			JiraIssueId = request.JiraIssueId ?? tc.JiraIssueId,
+			UpdatedAt = DateTime.UtcNow
+		};
 
+		db.TestCases.Update(updated);
 		await db.SaveChangesAsync(ct);
-		return ToResponse(tc);
+		return ToResponse(updated);
 	}
 
 	private static TestCaseResponse ToResponse(TestCase t) =>

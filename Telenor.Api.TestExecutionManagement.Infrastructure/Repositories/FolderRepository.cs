@@ -36,23 +36,22 @@ public class FolderRepository(AppDbContext db) : IFolderRepository
 
 	public async Task<FolderResponse?> UpdateFolderAsync(string id, UpdateFolderRequest request, CancellationToken ct = default)
 	{
-		var folder = await db.CycleFolders.FindAsync([id], ct);
+		var folder = await db.CycleFolders.AsNoTracking().FirstOrDefaultAsync(f => f.Id == id, ct);
 		if (folder is null) return null;
 
-		if (request.Name is not null) folder.Name = request.Name;
-		if (request.SortOrder.HasValue) folder.SortOrder = request.SortOrder.Value;
+		var updated = folder with
+		{
+			Name = request.Name ?? folder.Name,
+			SortOrder = request.SortOrder ?? folder.SortOrder
+		};
 
+		db.CycleFolders.Update(updated);
 		await db.SaveChangesAsync(ct);
-		return new FolderResponse(folder.Id, folder.Name, folder.CycleId, folder.SortOrder);
+		return new FolderResponse(updated.Id, updated.Name, updated.CycleId, updated.SortOrder);
 	}
 
 	public async Task<bool> DeleteFolderAsync(string id, CancellationToken ct = default)
 	{
-		var folder = await db.CycleFolders.FindAsync([id], ct);
-		if (folder is null) return false;
-
-		db.CycleFolders.Remove(folder);
-		await db.SaveChangesAsync(ct);
-		return true;
+		return await db.CycleFolders.Where(f => f.Id == id).ExecuteDeleteAsync(ct) > 0;
 	}
 }

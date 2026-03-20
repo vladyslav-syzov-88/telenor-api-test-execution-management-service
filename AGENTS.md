@@ -112,9 +112,9 @@ Telenor.Api.TestCycleManagement (Web API)
 ## C# Coding Standards (Important)
 
 - Nullable reference types are enabled
-- Use `record` for DTOs and immutable models
+- Use `record` with `{ get; init; }` for all models: entities, DTOs, configuration POCOs, JSON deserialization models
+- Never mutate entities after construction — use `with` expressions to create modified copies, then `db.Update()` or `ExecuteUpdateAsync()`
 - Prefer `required` properties
-- Prefer `init` over `set` where possible
 - Avoid `dynamic`
 - Avoid reflection unless explicitly required
 - Specify types explicitly unless obvious

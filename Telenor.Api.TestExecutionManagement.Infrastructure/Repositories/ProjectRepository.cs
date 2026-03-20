@@ -59,14 +59,18 @@ public class ProjectRepository(AppDbContext db) : IProjectRepository
 
 	public async Task<VersionResponse?> UpdateVersionAsync(int id, UpdateVersionRequest request, CancellationToken ct = default)
 	{
-		var version = await db.Versions.FindAsync([id], ct);
+		var version = await db.Versions.AsNoTracking().FirstOrDefaultAsync(v => v.Id == id, ct);
 		if (version is null) return null;
 
-		if (request.Name is not null) version.Name = request.Name;
-		if (request.IsReleased.HasValue) version.IsReleased = request.IsReleased.Value;
-		if (request.ReleaseDate.HasValue) version.ReleaseDate = request.ReleaseDate.Value;
+		var updated = version with
+		{
+			Name = request.Name ?? version.Name,
+			IsReleased = request.IsReleased ?? version.IsReleased,
+			ReleaseDate = request.ReleaseDate ?? version.ReleaseDate
+		};
 
+		db.Versions.Update(updated);
 		await db.SaveChangesAsync(ct);
-		return new VersionResponse(version.Id, version.ProjectId, version.Name, version.IsReleased, version.ReleaseDate, version.JiraVersionId, version.CreatedAt);
+		return new VersionResponse(updated.Id, updated.ProjectId, updated.Name, updated.IsReleased, updated.ReleaseDate, updated.JiraVersionId, updated.CreatedAt);
 	}
 }

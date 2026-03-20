@@ -3,107 +3,107 @@ using System.Text.Json.Serialization;
 
 namespace Telenor.Api.TestExecutionManagement.Import.Models;
 
-public class ZephyrCycle
+public record ZephyrCycle
 {
 	[JsonPropertyName("id")]
-	public string Id { get; set; } = string.Empty;
+	public string Id { get; init; } = string.Empty;
 
 	[JsonPropertyName("name")]
-	public string Name { get; set; } = string.Empty;
+	public string Name { get; init; } = string.Empty;
 }
 
-public class ZephyrFolder
+public record ZephyrFolder
 {
 	[JsonPropertyName("id")]
-	public string Id { get; set; } = string.Empty;
+	public string Id { get; init; } = string.Empty;
 
 	[JsonPropertyName("name")]
-	public string Name { get; set; } = string.Empty;
+	public string Name { get; init; } = string.Empty;
 
 	[JsonPropertyName("cycleId")]
-	public string CycleId { get; set; } = string.Empty;
+	public string CycleId { get; init; } = string.Empty;
 
 	[JsonPropertyName("versionId")]
-	public int VersionId { get; set; }
+	public int VersionId { get; init; }
 
 	[JsonPropertyName("projectId")]
-	public int ProjectId { get; set; }
+	public int ProjectId { get; init; }
 }
 
-public class ZephyrExecutionStatus
+public record ZephyrExecutionStatus
 {
 	[JsonPropertyName("id")]
-	public int Id { get; set; }
+	public int Id { get; init; }
 }
 
-public class ZephyrExecutionDetails
+public record ZephyrExecutionDetails
 {
 	[JsonPropertyName("status")]
-	public ZephyrExecutionStatus Status { get; set; } = new();
+	public ZephyrExecutionStatus Status { get; init; } = new();
 
 	[JsonPropertyName("id")]
-	public string Id { get; set; } = string.Empty;
+	public string Id { get; init; } = string.Empty;
 
 	[JsonPropertyName("projectId")]
-	public int ProjectId { get; set; }
+	public int ProjectId { get; init; }
 
 	[JsonPropertyName("issueId")]
-	public int IssueId { get; set; }
+	public int IssueId { get; init; }
 
 	[JsonPropertyName("cycleId")]
-	public string CycleId { get; set; } = string.Empty;
+	public string CycleId { get; init; } = string.Empty;
 
 	[JsonPropertyName("versionId")]
-	public int VersionId { get; set; }
+	public int VersionId { get; init; }
 
 	[JsonPropertyName("comment")]
-	public string? Comment { get; set; }
+	public string? Comment { get; init; }
 }
 
-public class ZephyrTestExecution
+public record ZephyrTestExecution
 {
 	[JsonPropertyName("issueSummary")]
-	public string IssueSummary { get; set; } = string.Empty;
+	public string IssueSummary { get; init; } = string.Empty;
 
 	[JsonPropertyName("issueKey")]
-	public string IssueKey { get; set; } = string.Empty;
+	public string IssueKey { get; init; } = string.Empty;
 
 	[JsonPropertyName("execution")]
-	public ZephyrExecutionDetails Execution { get; set; } = new();
+	public ZephyrExecutionDetails Execution { get; init; } = new();
 
 	[JsonPropertyName("assigneeType")]
-	public string? AssigneeType { get; set; }
+	public string? AssigneeType { get; init; }
 }
 
-public class ZephyrSearchResult
+public record ZephyrSearchResult
 {
 	[JsonPropertyName("searchObjectList")]
-	public List<ZephyrTestExecution> SearchObjectList { get; set; } = [];
+	public List<ZephyrTestExecution> SearchObjectList { get; init; } = [];
 
 	[JsonPropertyName("totalCount")]
-	public int TotalCount { get; set; }
+	public int TotalCount { get; init; }
 }
 
-public class ZephyrExecutionsSearchResult
+public record ZephyrExecutionsSearchResult
 {
 	[JsonPropertyName("searchResult")]
-	public ZephyrSearchResult SearchResult { get; set; } = new();
+	public ZephyrSearchResult SearchResult { get; init; } = new();
 }
 
-public class JiraVersion
+public record JiraVersion
 {
 	[JsonPropertyName("id")]
-	public string Id { get; set; } = string.Empty;
+	public string Id { get; init; } = string.Empty;
 
 	[JsonPropertyName("name")]
-	public string Name { get; set; } = string.Empty;
+	public string Name { get; init; } = string.Empty;
 
 	[JsonPropertyName("released")]
-	public bool Released { get; set; }
+	public bool Released { get; init; }
 
 	[JsonPropertyName("releaseDate")]
-	public string? ReleaseDate { get; set; }
+	public string? ReleaseDate { get; init; }
 
 	[JsonPropertyName("projectId")]
-	public long ProjectId { get; set; }
+	public long ProjectId { get; init; }
 }

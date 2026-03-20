@@ -4,19 +4,19 @@ using Telenor.Api.TestExecutionManagement.Core.Enums;
 
 namespace Telenor.Api.TestExecutionManagement.Core.Entities;
 
-public class TestCycle
+public record TestCycle
 {
-	public string Id { get; set; } = Guid.NewGuid().ToString();
-	public int ProjectId { get; set; }
-	public int VersionId { get; set; }
-	public string Name { get; set; } = string.Empty;
-	public CycleStatus Status { get; set; } = CycleStatus.Draft;
-	public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-	public DateTime? StartDate { get; set; }
-	public DateTime? EndDate { get; set; }
+	public string Id { get; init; } = Guid.NewGuid().ToString();
+	public int ProjectId { get; init; }
+	public int VersionId { get; init; }
+	public string Name { get; init; } = string.Empty;
+	public CycleStatus Status { get; init; } = CycleStatus.Draft;
+	public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+	public DateTime? StartDate { get; init; }
+	public DateTime? EndDate { get; init; }
 
-	public Project Project { get; set; } = null!;
-	public Version Version { get; set; } = null!;
-	public ICollection<CycleFolder> Folders { get; set; } = [];
-	public ICollection<TestExecution> Executions { get; set; } = [];
+	public Project Project { get; init; } = null!;
+	public Version Version { get; init; } = null!;
+	public ICollection<CycleFolder> Folders { get; init; } = [];
+	public ICollection<TestExecution> Executions { get; init; } = [];
 }
